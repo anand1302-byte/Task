@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Styled Form with Voice</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #f4f4f4;
+            flex-direction: column;
+        }
+
+        .form-container {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            width: 300px;
+        }
+
+        input[type="text"] {
+            width: 80%;
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+
+        .btn {
+            padding: 10px 15px;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+            border-radius: 5px;
+            margin: 5px;
+        }
+
+        .voice-btn { background: #ff9800; color: white; }
+        .submit-btn { background: #4caf50; color: white; }
+        .speak-btn { background: #2196F3; color: white; }
+        .edit-btn { background: #FFC107; color: white; }
+        .delete-btn { background: #F44336; color: white; }
+
+        .btn:hover { opacity: 0.8; }
+
+        .table-container {
+            margin-top: 20px;
+            width: 400px;
+            background: white;
+            padding: 10px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            padding: 8px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+
+        th {
+            background: #4caf50;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="form-container">
+        <h2>Register</h2>
+        <form action="/register" method="post">
+            <input type="text" name="name" id="name" placeholder="Enter Name">
+            <br>
+            <button type="button" class="btn voice-btn" onclick="speechInput('name')">🎤 Voice</button>
+            <button type="submit" class="btn submit-btn">Submit</button>
+        </form>
+    </div>
+
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for user in names %}
+                <tr>
+                    <td>{{ user.name }}</td>
+                    <td>
+                        <button class="btn speak-btn" onclick="speakText('{{ user.name }}')">🔊</button>
+                        <button class="btn edit-btn" onclick="editName('{{ user._id }}', '{{ user.name }}')">✏️</button>
+                        <button class="btn delete-btn" onclick="deleteName('{{ user._id }}')">🗑️</button>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        function speechInput(field) {
+            const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+            recognition.lang = 'en-US';
+
+            recognition.onresult = function(event) {
+                document.getElementById(field).value = event.results[0][0].transcript;
+            };
+
+            recognition.start();
+        }
+
+        function speakText(text) {
+            let speech = new SpeechSynthesisUtterance();
+            speech.lang = "en-US";
+            speech.text = text;
+            speech.volume = 1;
+            speech.rate = 1;
+            speech.pitch = 1;
+            window.speechSynthesis.speak(speech);
+        }
+
+        function editName(id, currentName) {
+            let newName = prompt("Enter new name:", currentName);
+            if (newName) {
+                fetch(`/edit/${id}`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+                    body: `name=${newName}`
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === "success") {
+                        location.reload();
+                    }
+                });
+            }
+        }
+
+        function deleteName(id) {
+            if (confirm("Are you sure you want to delete this name?")) {
+                fetch(`/delete/${id}`, { method: "POST" })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === "success") {
+                        location.reload();
+                    }
+                });
+            }
+        }
+    </script>
+
+</body>
+</html>
