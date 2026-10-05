@@ -1,6 +1,11 @@
 name: BTC 5m Paper Tracker
 
 on:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/btc-paper.yml"
   schedule:
     - cron: "*/5 * * * *"
   workflow_dispatch:
