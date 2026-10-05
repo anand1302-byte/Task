@@ -1,0 +1,61 @@
+name: BTC 5m Paper Tracker
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: write
+
+jobs:
+  paper-trade:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Time gate
+        id: gate
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          NOW=$(date -u +%s)
+          START=$(date -u -d "2026-10-05T21:35:00Z" +%s)
+          END=$(date -u -d "2026-10-06T04:30:00Z" +%s)
+
+          if [ "$NOW" -gt "$END" ]; then
+            echo "active=false" >> "$GITHUB_OUTPUT"
+            echo "Cutoff reached. Disabling scheduled workflow."
+            gh api --method PUT "repos/${GITHUB_REPOSITORY}/actions/workflows/btc-paper.yml/disable"
+            exit 0
+          fi
+
+          if [ "$NOW" -lt "$START" ]; then
+            echo "active=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "active=true" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout tracker branch
+        if: steps.gate.outputs.active == 'true'
+        uses: actions/checkout@v4
+        with:
+          ref: btc-paper-tracker
+
+      - name: Run BTC paper tracker
+        if: steps.gate.outputs.active == 'true'
+        shell: bash
+        env:
+          START_UTC: "2026-10-05T21:35:00Z"
+          END_UTC: "2026-10-06T04:30:00Z"
+        run: |
+          node btc-paper-tracker.js | tee btc-paper-log.jsonl
+
+      - name: Upload run log
+        if: steps.gate.outputs.active == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: btc-paper-${{ github.run_id }}
+          path: btc-paper-log.jsonl
+          retention-days: 1
